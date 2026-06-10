@@ -1,5 +1,5 @@
 ---
-title: "Get started with maxmind-geolite-mirror"
+title: "Quickstart: Install and Run maxmind-geolite-mirror"
 sidebarTitle: "Quickstart"
 description: "Install maxmind-geolite-mirror, configure your MaxMind license key, and download GeoLite2 databases to your server in under 5 minutes."
 ---
@@ -54,7 +54,7 @@ description: "Install maxmind-geolite-mirror, configure your MaxMind license key
     maxmind-geolite-mirror
     ```
 
-    The tool processes each database in series. For each file it first sends a `HEAD` request with an `If-Modified-Since` header. If the remote file is newer (or the local file does not yet exist), it downloads and extracts the tarball. You will see output similar to:
+    The tool processes each database in series. For each file it checks whether a local copy already exists. If it does, a `HEAD` request with an `If-Modified-Since` header is sent to confirm whether the remote file is newer. If no local copy exists yet, the tool downloads immediately without a preliminary check. You will see output similar to:
 
     ```
     downloading /usr/local/share/GeoIP/GeoLite2-Country.mmdb

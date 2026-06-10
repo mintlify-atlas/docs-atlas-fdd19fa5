@@ -63,7 +63,7 @@ When `maxmind-geolite-mirror` encounters a problem it prints a message to stderr
   **Error message:**
 
   ```
-  cannot open /usr/local/share/GeoIP/GeoLite2-Country.mmdb, tar-stream package is not available.
+  cannot open ..., tar-stream package is not available.
   ```
 
   **Cause:** `tar-stream` is an optional dependency. The tool requires it to extract `.mmdb` files from the downloaded `.tar.gz` archives. If it was not installed alongside the package, the extraction step fails.

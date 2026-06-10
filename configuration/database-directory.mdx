@@ -57,9 +57,6 @@ This means `dbDir` must end with a `/`. The built-in default already includes th
 ```bash
 # Correct — trailing slash present
 export MAXMIND_DB_DIR=/home/example/maxmind-db/
-
-# Also works — the shell variable is read as-is
-export MAXMIND_DB_DIR=/home/example/maxmind-db/
 ```
 
 Without the trailing slash, the tool will attempt to write files with paths such as `/home/example/maxmind-dbGeoLite2-Country.mmdb`, which is almost certainly not what you want.

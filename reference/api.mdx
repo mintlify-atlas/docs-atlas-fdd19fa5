@@ -7,8 +7,12 @@ description: "Reference documentation for the maxmind-geolite-mirror module's fo
 While `maxmind-geolite-mirror` is primarily used as a CLI tool, it also exposes a programmatic Node.js API from `lib/mm-geolite-mirror.js`. You can require it directly in your own scripts to download or check individual MaxMind GeoLite2 databases without invoking the CLI.
 
 ```js
-const mirror = require('maxmind-geolite-mirror');
+const mirror = require('maxmind-geolite-mirror/lib/mm-geolite-mirror');
 ```
+
+<Note>
+  The package's `main` entry point (`bin/maxmind-geolite-mirror`) is the CLI runner, not the library. Always use the explicit subpath `require('maxmind-geolite-mirror/lib/mm-geolite-mirror')` to access the programmatic API.
+</Note>
 
 ---
 
@@ -35,8 +39,7 @@ Downloads a single MaxMind database file if the remote version is newer than the
 **Example**
 
 ```js
-const mirror = require('maxmind-geolite-mirror');
-const config = require('maxmind-geolite-mirror/lib/config');
+const mirror = require('maxmind-geolite-mirror/lib/mm-geolite-mirror');
 
 const item = { local: 'GeoLite2-Country.mmdb', remote: 'GeoLite2-Country' };
 mirror.doOne(item, (err) => {
@@ -47,6 +50,8 @@ mirror.doOne(item, (err) => {
 
 <Note>
   `doOne` requires a valid MaxMind license key. Set the `MAXMIND_LICENSE_KEY` environment variable or populate `license_key` in `lib/config.js` before calling this function. Without a license key, the callback is invoked immediately with an error string.
+
+  When writing tests that call the API directly, set `process.env.MM_TESTING = '1'` to bypass the license key guard. With `MM_TESTING` set, `doOne` skips the license key check and sets the request path to `${config.urlPath}${item.remote}` instead of building the full authenticated MaxMind URL.
 </Note>
 
 ---
@@ -60,13 +65,13 @@ Checks whether the remote file is newer than the local copy by issuing an HTTP H
 </ParamField>
 
 <ParamField body="httpOpts" type="object" required>
-  An HTTPS request options object as returned by `httpReqOpts`. Must include `hostname`, `protocol`, `method`, `path`, and `headers`.
+  An HTTPS request options object as returned by `httpReqOpts`. Must include `hostname`, `protocol`, `method`, `path`, and `headers`. This function mutates the object by adding an `If-Modified-Since` header before issuing the request.
 </ParamField>
 
 <ParamField body="done" type="function" required>
   Callback with signature `(shouldGet: boolean) => void`.
 
-  - `true` — the remote file is newer (HTTP 200) or the local file does not exist; the caller should proceed to download.
+  - `true` — the remote file is newer (HTTP 200), an unrecognised HTTP status code was received, or the local file does not exist; the caller should proceed to download.
   - `false` — the local copy is current (HTTP 304), the remote returned 404, or a network error occurred; no download is needed.
 </ParamField>
 
@@ -90,7 +95,7 @@ Downloads a `.tar.gz` archive from MaxMind's servers and extracts the `.mmdb` fi
   Callback with signature `(err: string | null) => void`. Called with no argument on success, or with an error string if the download or extraction fails.
 </ParamField>
 
-`download` automatically follows HTTP 302 redirects by recursively calling itself with the `Location` header value. Extraction is handled by `tar-stream`, which is listed as an optional dependency — if it is not installed, `done` is called with an error message.
+When the server responds with HTTP 302, `download` follows the redirect by calling itself again with the `Location` header value passed as the `dest` argument (i.e. `download(res.headers.location, opts, done)`). Extraction is handled by `tar-stream`, which is listed as an optional dependency — if it is not installed, `done` is called with an error message.
 
 <Note>
   `tar-stream` must be available at runtime for extraction to work. Install it with `npm install tar-stream` if you are using the API outside of a standard `maxmind-geolite-mirror` installation.
@@ -103,7 +108,7 @@ Downloads a `.tar.gz` archive from MaxMind's servers and extracts the `.mmdb` fi
 Builds a base HTTPS request options object from a parsed URL. The returned object is used as the starting point for both HEAD (freshness check) and GET (download) requests throughout the module.
 
 <ParamField body="uri" type="object" required>
-  A URL-like object with `hostname` and `protocol` string properties. Typically a `URL` instance constructed with `new URL(...)`.
+  A URL-like object with `hostname` and `protocol` string properties. Typically produced by `new URL(url.format({ ... }))` as used inside `doOne`.
 </ParamField>
 
 **Returns** an options object of the shape:
@@ -126,7 +131,7 @@ The `path` property is not set by `httpReqOpts` — it is added by the calling f
 
 ## Configuration
 
-Runtime behaviour is controlled by `lib/config.js`. The file exports the following values, several of which can be overridden via environment variables:
+Runtime behaviour is controlled by `lib/config.js`. Require it with `require('maxmind-geolite-mirror/lib/config')`. The file exports the following values, several of which can be overridden via environment variables:
 
 | Export | Type | Default | Description |
 |---|---|---|---|
@@ -152,7 +157,3 @@ exports.geoIpDbs = [
   { local: 'GeoLite2-ASN.mmdb',     remote: 'GeoLite2-ASN' },
 ];
 ```
-
-<Note>
-  The module is primarily tested through the CLI. When writing tests that call the API directly, set `process.env.MM_TESTING = '1'` to bypass the license key guard inside `doOne`. With `MM_TESTING` set, the function skips the license key check and rewrites the request path to point at a local test fixture instead of the live MaxMind endpoint.
-</Note>

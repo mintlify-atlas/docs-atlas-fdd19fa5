@@ -57,6 +57,18 @@ The tool iterates through the three databases in series, in this fixed order:
 
 Each database is fully checked (and downloaded if necessary) before the next one begins. Parallel downloads are not performed.
 
+## 404 responses
+
+If the MaxMind server returns `404 Not Found` for a database — for example because the edition ID has changed or the license key does not grant access to that edition — the tool logs the following message and continues to the next database. A `404` is not treated as a fatal error and does not trigger a non-zero exit:
+
+```
+404 not found for /usr/local/share/GeoIP/GeoLite2-Country.mmdb
+```
+
+## Redirect handling
+
+The tool transparently follows `302` redirects during the download phase. If the MaxMind download server redirects the `GET` request, the tool re-issues the request to the `Location` URL automatically. No user action or configuration is required.
+
 ## Error handling and exit codes
 
 When an error occurs during processing of any database — such as a missing license key, a network failure, or a failed write — the tool prints the error to stderr, logs `exiting prematurely.` to stdout if any databases remain in the queue, and exits with code `1`. Databases that have not yet been processed are skipped.

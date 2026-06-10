@@ -50,5 +50,5 @@ MaxMind serves the database as a gzip-compressed tarball (`.tar.gz`). The tool d
 Older versions of this tool supported MaxMind's v1 `.dat` format files (`GeoIP.dat`, `GeoIPCity.dat`, `GeoIPASNum.dat`, and others). MaxMind stopped publishing those files and they are no longer supported. The v1 entries remain visible as comments in `config.js` for historical reference only.
 
 <Info>
-  MaxMind publishes updated GeoLite2 databases every Tuesday. Running `maxmind-geolite-mirror` on a weekly schedule is sufficient to stay current. The tool performs a `HEAD` request before each download and skips any database that has not changed since the last run, so redundant runs are safe and inexpensive.
+  MaxMind publishes updated GeoLite2 databases on a weekly basis. Running `maxmind-geolite-mirror` on a weekly schedule is sufficient to stay current. The tool sends an `If-Modified-Since` request before each download and skips any database that has not changed since the last run, so redundant runs are safe and inexpensive.
 </Info>

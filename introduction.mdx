@@ -1,7 +1,7 @@
 ---
 title: "maxmind-geolite-mirror: GeoLite2 Database Mirroring"
 sidebarTitle: "Introduction"
-description: "Learn how maxmind-geolite-mirror downloads and keeps MaxMind GeoLite2 Country, City, and ASN databases up-to-date on your server."
+description: "Learn how maxmind-geolite-mirror downloads and keeps MaxMind GeoLite2 Country, City, and ASN databases up-to-date on your local server."
 ---
 
 `maxmind-geolite-mirror` is a lightweight Node.js CLI tool that fetches MaxMind's GeoLite2 IP geolocation databases directly to your server and keeps them current over time. Rather than manually downloading database files through a web interface, you run a single command — or automate it on a schedule — and the tool handles authentication, conditional downloading, and file extraction for all three GeoLite2 databases at once. Because downloads only happen when a newer version is available on MaxMind's servers, repeated runs are fast and network-efficient by design.
@@ -24,7 +24,7 @@ All three files are stored in a single directory on disk (default: `/usr/local/s
 
 ## Conditional downloads with `If-Modified-Since`
 
-Every run begins with a lightweight `HEAD` request to MaxMind's download server. The request includes an `If-Modified-Since` header populated from the local file's modification timestamp. If the server responds with `304 Not Modified`, the local copy is already current and no download occurs. Only when the server returns `200 OK` — meaning the remote file is newer — does the tool proceed to fetch and extract the database. This means running the tool daily or weekly has negligible network overhead when databases have not been updated.
+For each database, the tool first checks whether a local copy already exists. If it does, a lightweight `HEAD` request is sent to MaxMind's download server with an `If-Modified-Since` header populated from the local file's modification timestamp. If the server responds with `304 Not Modified`, the local copy is already current and no download occurs. Only when the server returns `200 OK` — meaning the remote file is newer — does the tool proceed to fetch and extract the database. If no local copy exists yet, the tool skips the `HEAD` check and downloads immediately. This means running the tool daily or weekly has negligible network overhead once the databases are established.
 
 ## Zero-dependency design
 
