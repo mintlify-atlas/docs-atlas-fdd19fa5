@@ -1,0 +1,136 @@
+---
+title: "Automate GeoLite2 database updates with cron or systemd"
+sidebarTitle: "Scheduling"
+description: "Schedule maxmind-geolite-mirror to run weekly and keep GeoLite2 Country, City, and ASN databases current using cron or a systemd timer unit."
+---
+
+MaxMind publishes updated GeoLite2 databases every Tuesday. Running `maxmind-geolite-mirror` on a schedule ensures your local copies stay current without manual intervention. Because the tool uses conditional HTTP requests, running it more frequently than necessary is safe — it only downloads a database when the remote copy is newer than what you already have.
+
+<Tabs>
+  <Tab title="cron">
+
+  ## Editing the crontab
+
+  Open the current user's crontab for editing:
+
+  ```bash
+  crontab -e
+  ```
+
+  ## Weekly cron entry
+
+  The following entry runs the mirror every Wednesday at 03:00, giving MaxMind's Tuesday release a few hours to propagate before you fetch it:
+
+  ```cron
+  0 3 * * 3 MAXMIND_LICENSE_KEY=your_key_here /usr/local/bin/maxmind-geolite-mirror
+  ```
+
+  ## Environment limitations
+
+  cron does not source your shell profile (`~/.bashrc`, `~/.profile`, etc.), so environment variables exported there are not available to cron jobs. The simplest fix is to pass variables inline in the cron entry itself, as shown above. For more complex setups, a wrapper script keeps the cron entry clean.
+
+  ## Wrapper script approach
+
+  Create a shell script that sets all required environment variables, then call that script from cron:
+
+  ```bash wrapper.sh
+  #!/bin/bash
+  export MAXMIND_LICENSE_KEY=your_key_here
+  export MAXMIND_DB_DIR=/usr/local/share/GeoIP
+  /usr/local/bin/maxmind-geolite-mirror
+  ```
+
+  Make the script executable:
+
+  ```bash
+  chmod +x /path/to/wrapper.sh
+  ```
+
+  Simplified cron entry:
+
+  ```cron
+  0 3 * * 3 /path/to/wrapper.sh
+  ```
+
+  <Note>
+    cron jobs capture stdout and stderr only if you redirect them explicitly. To
+    retain a log for debugging, append output to a file:
+
+    ```cron
+    0 3 * * 3 /path/to/wrapper.sh >> /var/log/maxmind-geolite-mirror.log 2>&1
+    ```
+  </Note>
+
+  </Tab>
+  <Tab title="systemd timer">
+
+  ## Service unit
+
+  Create the service unit that runs the mirror:
+
+  ```ini /etc/systemd/system/maxmind-geolite-mirror.service
+  [Unit]
+  Description=MaxMind GeoLite2 database mirror
+  After=network-online.target
+  Wants=network-online.target
+
+  [Service]
+  Type=oneshot
+  Environment="MAXMIND_LICENSE_KEY=your_key_here"
+  Environment="MAXMIND_DB_DIR=/usr/local/share/GeoIP"
+  ExecStart=/usr/local/bin/maxmind-geolite-mirror
+  StandardOutput=journal
+  StandardError=journal
+  ```
+
+  ## Timer unit
+
+  Create the timer that activates the service once a week, shortly after MaxMind's Tuesday release:
+
+  ```ini /etc/systemd/system/maxmind-geolite-mirror.timer
+  [Unit]
+  Description=Run MaxMind GeoLite2 mirror weekly
+
+  [Timer]
+  OnCalendar=Wed *-*-* 03:00:00
+  Persistent=true
+
+  [Install]
+  WantedBy=timers.target
+  ```
+
+  `Persistent=true` means that if the system was off when the timer was due to fire, systemd will run the service shortly after the next boot.
+
+  ## Enabling and starting
+
+  Reload systemd, then enable and start the timer:
+
+  ```bash
+  systemctl daemon-reload
+  systemctl enable --now maxmind-geolite-mirror.timer
+  ```
+
+  ## Checking timer status
+
+  Confirm the timer is active and see when it will next fire:
+
+  ```bash
+  systemctl list-timers maxmind-geolite-mirror.timer
+  ```
+
+  View the most recent service output:
+
+  ```bash
+  journalctl -u maxmind-geolite-mirror.service
+  ```
+
+  </Tab>
+</Tabs>
+
+<Tip>
+  Because `maxmind-geolite-mirror` only downloads a database when the remote
+  copy is newer than your local file (HTTP `304` means skip), it is safe to
+  schedule the tool more aggressively — for example daily — without incurring
+  unnecessary bandwidth or MaxMind API calls. Only changed files are ever
+  downloaded.
+</Tip>

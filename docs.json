@@ -1,72 +1,64 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "maxmind-geolite-mirror",
+  "theme": "luma",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0bb4b5",
+    "light": "#141414"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
+  "favicon": "https://media.brand.dev/c7e20f91-5172-4ac3-bcf7-9e8bd2dbb423.png",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://media.brand.dev/e8ade773-9887-4475-ac18-83e18405ae07.svg",
+    "dark": "https://media.brand.dev/e8ade773-9887-4475-ac18-83e18405ae07.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/msimerson/maxmind-geolite-mirror"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/msimerson/maxmind-geolite-mirror"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/license-key",
+              "configuration/database-directory",
+              "configuration/databases"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/running-the-mirror",
+              "usage/scheduling",
+              "usage/troubleshooting"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/api",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

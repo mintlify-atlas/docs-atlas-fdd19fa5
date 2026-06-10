@@ -1,0 +1,178 @@
+---
+title: "Troubleshoot maxmind-geolite-mirror errors and common issues"
+sidebarTitle: "Troubleshooting"
+description: "Diagnose and fix common maxmind-geolite-mirror errors: missing license key, permission denied, tar-stream not found, 404 responses, and network issues."
+---
+
+When `maxmind-geolite-mirror` encounters a problem it prints a message to stderr and, for fatal errors, exits with code `1`. The most productive first step is to run the tool interactively in your terminal so you can see both stdout and stderr in real time. The sections below cover the most common issues and their fixes.
+
+<AccordionGroup>
+
+  <Accordion title="Missing license key error">
+
+  **Error message:**
+
+  ```
+  missing license_key in /usr/local/lib/node_modules/maxmind-geolite-mirror/lib/config.js!
+  ```
+
+  **Cause:** Neither the `MAXMIND_LICENSE_KEY` environment variable nor the `license_key` field in `lib/config.js` has been set. The tool requires a valid MaxMind license key to construct the download URL; without it, processing stops immediately.
+
+  **Fix — environment variable:**
+
+  ```bash
+  export MAXMIND_LICENSE_KEY=your_key_here
+  maxmind-geolite-mirror
+  ```
+
+  **Fix — config.js:**
+
+  Open `lib/config.js` inside the installed package and set the value directly:
+
+  ```js
+  exports.license_key = 'your_key_here';
+  ```
+
+  </Accordion>
+
+  <Accordion title="Permission denied writing to /usr/local/share/GeoIP/">
+
+  **Cause:** The destination directory either does not exist or the current user does not have write permission to it.
+
+  **Fix — create the directory and grant ownership:**
+
+  ```bash
+  mkdir -p /usr/local/share/GeoIP
+  chown $(whoami) /usr/local/share/GeoIP
+  ```
+
+  **Fix — use a different directory via `MAXMIND_DB_DIR`:**
+
+  If you do not have root access, redirect the output to a path you own:
+
+  ```bash
+  export MAXMIND_DB_DIR=/home/example/maxmind-db
+  mkdir -p "$MAXMIND_DB_DIR"
+  maxmind-geolite-mirror
+  ```
+
+  </Accordion>
+
+  <Accordion title="tar-stream package is not available">
+
+  **Error message:**
+
+  ```
+  cannot open /usr/local/share/GeoIP/GeoLite2-Country.mmdb, tar-stream package is not available.
+  ```
+
+  **Cause:** `tar-stream` is an optional dependency. The tool requires it to extract `.mmdb` files from the downloaded `.tar.gz` archives. If it was not installed alongside the package, the extraction step fails.
+
+  **Fix — install globally:**
+
+  ```bash
+  npm install -g tar-stream
+  ```
+
+  **Fix — install in the package directory:**
+
+  ```bash
+  cd $(npm root -g)/maxmind-geolite-mirror
+  npm install tar-stream
+  ```
+
+  After installing, re-run `maxmind-geolite-mirror` to resume downloads.
+
+  </Accordion>
+
+  <Accordion title="404 Not Found for a database">
+
+  **Log output:**
+
+  ```
+  404 not found for /usr/local/share/GeoIP/GeoLite2-Country.mmdb
+  ```
+
+  **Cause:** The remote edition ID used to build the download URL does not match any database available on the MaxMind server. This can happen if an edition name has changed or been retired.
+
+  **Behavior:** A `404` response is not treated as a fatal error. The tool logs the message and continues to the next database in the list; it does not exit with code `1`.
+
+  **Fix:** Open `lib/config.js` and verify the `remote` field for each entry in `geoIpDbs`:
+
+  ```js
+  exports.geoIpDbs = [
+      { local: 'GeoLite2-Country.mmdb', remote: 'GeoLite2-Country' },
+      { local: 'GeoLite2-City.mmdb',    remote: 'GeoLite2-City' },
+      { local: 'GeoLite2-ASN.mmdb',     remote: 'GeoLite2-ASN' },
+  ];
+  ```
+
+  Cross-reference the edition IDs against your MaxMind account portal to confirm which editions your license key grants access to.
+
+  </Accordion>
+
+  <Accordion title="Downloads always happen (no 304 responses)">
+
+  **Symptom:** Every run downloads all databases regardless of whether MaxMind has published new data.
+
+  **Cause:** The tool derives the `If-Modified-Since` request header from the local file's filesystem modification time (`mtime`). If the files were placed by an external process — for example via `cp`, `rsync`, or a manual `touch` — the `mtime` may be set to the current time rather than the time of the last MaxMind release, causing the server to return `200` every time.
+
+  **Explanation:** On a successful download, the tool writes the `.mmdb` via an atomic rename of a `.tmp` file. The resulting `mtime` reflects the moment the download completed, which correlates closely with the last release date. Any other operation that rewrites the file will reset this timestamp.
+
+  **Fix:** Allow `maxmind-geolite-mirror` to be the sole writer of files in the database directory. If you need to copy databases elsewhere, copy them out of the directory rather than into it, and avoid running `touch` on the files.
+
+  </Accordion>
+
+  <Accordion title="Tool exits prematurely after first error">
+
+  **Symptom:** Only the first database is attempted; the remaining two are never downloaded. The tool exits with code `1`.
+
+  **Cause:** Any fatal error during processing of a database — such as a network failure, a write error, or a missing license key — causes the tool to call `process.exit(1)` immediately. Databases that have not yet been processed are skipped.
+
+  **Log output:**
+
+  ```
+  exiting prematurely.
+  ```
+
+  **Fix:** Resolve the error reported on stderr before re-running. Because processing is serial, fixing the first error and re-running will pick up where things left off (all three databases are always evaluated from the start, but previously up-to-date files will be skipped via `304`).
+
+  </Accordion>
+
+  <Accordion title="Running in cron does nothing">
+
+  **Symptom:** The cron job runs on schedule (visible in system logs) but no databases are downloaded or updated and there is no output.
+
+  **Cause:** cron does not source the user's shell profile, so environment variables set in `~/.bashrc`, `~/.profile`, or similar files — including `MAXMIND_LICENSE_KEY` — are not present in the cron job's environment. Without a license key the tool exits immediately with an error, and without output redirection that error is silently discarded.
+
+  **Fix — pass env vars inline:**
+
+  ```cron
+  0 3 * * 3 MAXMIND_LICENSE_KEY=your_key_here /usr/local/bin/maxmind-geolite-mirror
+  ```
+
+  **Fix — use a wrapper script and capture output:**
+
+  ```bash wrapper.sh
+  #!/bin/bash
+  export MAXMIND_LICENSE_KEY=your_key_here
+  export MAXMIND_DB_DIR=/usr/local/share/GeoIP
+  /usr/local/bin/maxmind-geolite-mirror
+  ```
+
+  ```cron
+  0 3 * * 3 /path/to/wrapper.sh >> /var/log/maxmind-geolite-mirror.log 2>&1
+  ```
+
+  Redirecting stdout and stderr to a log file makes it straightforward to confirm whether the job ran successfully.
+
+  </Accordion>
+
+</AccordionGroup>
+
+<Note>
+  If you encounter an issue not covered here, check the project's GitHub issue
+  tracker: [https://github.com/msimerson/maxmind-geolite-mirror/issues](https://github.com/msimerson/maxmind-geolite-mirror/issues).
+  Search existing issues before opening a new one — your problem may already
+  have a documented solution or open fix.
+</Note>

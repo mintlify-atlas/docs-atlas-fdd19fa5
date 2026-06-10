@@ -1,0 +1,69 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "maxmind-geolite-mirror",
+  "projectDescription": "A Node.js CLI tool that mirrors MaxMind GeoLite2 databases (Country, City, ASN) from MaxMind's servers, downloading only when the remote file is newer than the local copy.",
+  "theme": "luma",
+  "primaryColor": "#0bb4b5",
+  "lightColor": "#141414",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/license-key",
+              "configuration/database-directory",
+              "configuration/databases"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/running-the-mirror",
+              "usage/scheduling",
+              "usage/troubleshooting"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/api",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Downloads GeoLite2-Country, GeoLite2-City, and GeoLite2-ASN databases",
+    "Conditional downloads — only fetches when the remote is newer than the local copy (If-Modified-Since header)",
+    "Follows HTTP 302 redirects",
+    "Zero runtime dependencies (tar-stream is optional)",
+    "License key via environment variable (MAXMIND_LICENSE_KEY) or config.js",
+    "Configurable output directory via MAXMIND_DB_DIR environment variable",
+    "Tarball extraction directly to .mmdb format"
+  ],
+  "publicApiSurface": [
+    "bin/maxmind-geolite-mirror (CLI entry point)",
+    "mirror.doOne(item, callback) — download a single database if remote is newer",
+    "mirror.isRemoteNewer(dest, httpOpts, callback) — check if remote file is newer than local",
+    "mirror.download(dest, opts, callback) — download and extract a tarball",
+    "mirror.httpReqOpts(uri) — build HTTPS request options",
+    "config.dbDir — local database storage directory",
+    "config.license_key — MaxMind license key",
+    "config.geoIpDbs — array of {local, remote} database descriptors",
+    "MAXMIND_LICENSE_KEY environment variable",
+    "MAXMIND_DB_DIR environment variable"
+  ]
+}

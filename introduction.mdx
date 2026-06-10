@@ -1,0 +1,52 @@
+---
+title: "maxmind-geolite-mirror: GeoLite2 Database Mirroring"
+sidebarTitle: "Introduction"
+description: "Learn how maxmind-geolite-mirror downloads and keeps MaxMind GeoLite2 Country, City, and ASN databases up-to-date on your server."
+---
+
+`maxmind-geolite-mirror` is a lightweight Node.js CLI tool that fetches MaxMind's GeoLite2 IP geolocation databases directly to your server and keeps them current over time. Rather than manually downloading database files through a web interface, you run a single command — or automate it on a schedule — and the tool handles authentication, conditional downloading, and file extraction for all three GeoLite2 databases at once. Because downloads only happen when a newer version is available on MaxMind's servers, repeated runs are fast and network-efficient by design.
+
+<Note>
+  A free MaxMind account is required to download GeoLite2 databases. Sign up at [maxmind.com](https://www.maxmind.com/en/geolite2/signup) to obtain a license key. Once registered, generate a license key in your account portal and set it as the `MAXMIND_LICENSE_KEY` environment variable before running the tool.
+</Note>
+
+## What gets mirrored
+
+The tool downloads the three current GeoLite2 binary database files in MaxMind DB (`.mmdb`) format:
+
+| File | Contents |
+|---|---|
+| `GeoLite2-Country.mmdb` | Maps IP addresses to ISO country codes and country names |
+| `GeoLite2-City.mmdb` | Maps IP addresses to city, subdivision, country, and postal data |
+| `GeoLite2-ASN.mmdb` | Maps IP addresses to Autonomous System Numbers and organization names |
+
+All three files are stored in a single directory on disk (default: `/usr/local/share/GeoIP/`) and can be read by any MaxMind-compatible library.
+
+## Conditional downloads with `If-Modified-Since`
+
+Every run begins with a lightweight `HEAD` request to MaxMind's download server. The request includes an `If-Modified-Since` header populated from the local file's modification timestamp. If the server responds with `304 Not Modified`, the local copy is already current and no download occurs. Only when the server returns `200 OK` — meaning the remote file is newer — does the tool proceed to fetch and extract the database. This means running the tool daily or weekly has negligible network overhead when databases have not been updated.
+
+## Zero-dependency design
+
+The tool is built entirely on Node.js built-in modules — `https`, `fs`, `zlib`, `path`, and `url` — with no runtime npm dependencies to install or keep up to date. This keeps the package small, auditable, and suitable for locked-down server environments where third-party dependencies are a concern. The one optional dependency, `tar-stream`, is listed under `optionalDependencies` and is only required for tarball extraction during database downloads. If `tar-stream` is not installed, the tool will report an error when it attempts to extract a `.tar.gz` response.
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the CLI, set your license key, and download your first databases in under five minutes.
+  </Card>
+  <Card title="License Key Configuration" icon="key" href="/configuration/license-key">
+    Learn how to configure your MaxMind license key via environment variable or config file.
+  </Card>
+  <Card title="Running the Mirror" icon="terminal" href="/usage/running-the-mirror">
+    Understand command output, error handling, and how to mirror databases on demand.
+  </Card>
+  <Card title="Scheduling" icon="clock" href="/usage/scheduling">
+    Set up a cron job or systemd timer to keep your databases automatically up-to-date.
+  </Card>
+</CardGroup>
+
+<Tip>
+  MaxMind updates the GeoLite2 databases on Tuesdays. Running `maxmind-geolite-mirror` once a week — for example, every Wednesday morning — ensures your data is always current while keeping bandwidth usage minimal thanks to the built-in `If-Modified-Since` check. See the [Scheduling guide](/usage/scheduling) for ready-to-use cron examples.
+</Tip>

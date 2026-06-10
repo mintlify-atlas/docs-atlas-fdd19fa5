@@ -1,0 +1,91 @@
+---
+title: "Configure your MaxMind license key"
+sidebarTitle: "License Key"
+description: "Set the MAXMIND_LICENSE_KEY environment variable or edit config.js to authenticate maxmind-geolite-mirror with MaxMind's download API."
+---
+
+A MaxMind license key is required to authenticate every download request that `maxmind-geolite-mirror` makes to `download.maxmind.com`. Without a valid key the tool cannot reach the MaxMind API, and it will exit immediately with an error. You can supply the key in one of two ways: as an environment variable (recommended) or by editing `lib/config.js` directly.
+
+<Warning>
+  If no license key is configured — neither the `MAXMIND_LICENSE_KEY` environment variable nor `exports.license_key` in `lib/config.js` — the tool prints an error message and exits with code `1`. No databases are downloaded.
+</Warning>
+
+## Setting the license key
+
+<Tabs>
+  <Tab title="Environment Variable">
+    Export `MAXMIND_LICENSE_KEY` before running the mirror command:
+
+    ```bash
+    export MAXMIND_LICENSE_KEY=your_key_here
+    maxmind-geolite-mirror
+    ```
+
+    To make the variable available in every new shell session, add the `export` line to your shell profile:
+
+    ```bash
+    # ~/.bashrc  or  ~/.zshrc
+    export MAXMIND_LICENSE_KEY=your_key_here
+    ```
+
+    Then reload the profile:
+
+    ```bash
+    source ~/.bashrc   # or: source ~/.zshrc
+    ```
+
+    The environment variable approach is recommended because it keeps credentials out of source-controlled files.
+  </Tab>
+  <Tab title="Config File">
+    Open `lib/config.js` inside the package and set `exports.license_key` to your key:
+
+    ```js
+    // lib/config.js
+
+    // your MaxMind license key, this is REQUIRED!
+    exports.license_key = 'your_key_here';
+    ```
+
+    Save the file. The value is read once at startup whenever the CLI runs.
+
+    Note that editing this file directly means the key is stored in plain text alongside the package code. Use this method only in environments where that is acceptable, such as a dedicated server that is not under version control.
+  </Tab>
+</Tabs>
+
+## How the two methods interact
+
+`lib/config.js` contains the following logic:
+
+```js
+exports.license_key = '';
+if (process.env.MAXMIND_LICENSE_KEY && exports.license_key === '') {
+    exports.license_key = process.env.MAXMIND_LICENSE_KEY;
+}
+```
+
+The environment variable is applied only when `exports.license_key` is still an empty string. This means:
+
+- If `MAXMIND_LICENSE_KEY` is set and `config.js` has `''` (the default), the **environment variable wins**.
+- If `config.js` has a non-empty string, that value is used regardless of the environment variable.
+
+## Verifying the key
+
+Run the tool and watch for download output:
+
+```bash
+maxmind-geolite-mirror
+```
+
+A successful run prints lines such as:
+
+```
+downloading /usr/local/share/GeoIP/GeoLite2-Country.mmdb
+downloading /usr/local/share/GeoIP/GeoLite2-City.mmdb
+downloading /usr/local/share/GeoIP/GeoLite2-ASN.mmdb
+```
+
+If the databases are already up to date, each line will instead read `<path> is up-to-date`. An authentication failure or missing key produces an error message and a non-zero exit code.
+
+<Note>
+  Free GeoLite2 license keys are available at [maxmind.com/en/geolite2/signup](https://www.maxmind.com/en/geolite2/signup). A MaxMind account is required, but there is no cost for GeoLite2 access.
+</Note>

@@ -1,0 +1,109 @@
+---
+title: "Running maxmind-geolite-mirror to update GeoIP databases"
+sidebarTitle: "Running"
+description: "Run maxmind-geolite-mirror from the command line to download or update GeoLite2 Country, City, and ASN databases with conditional HTTP fetching."
+---
+
+`maxmind-geolite-mirror` is a zero-argument CLI tool that checks each GeoLite2 database against the MaxMind download server and fetches only what has changed. On every run it issues an HTTP `HEAD` request with an `If-Modified-Since` header derived from the local file's modification time. If the server returns `304 Not Modified`, the file is left untouched; if it returns `200 OK`, the tool downloads the `.tar.gz` archive, extracts the `.mmdb` file, and writes it to the configured database directory.
+
+## Basic invocation
+
+With `MAXMIND_LICENSE_KEY` already exported in your shell session, run the tool with no arguments:
+
+```bash
+maxmind-geolite-mirror
+```
+
+Or use the full path to the installed binary:
+
+```bash
+/usr/local/bin/maxmind-geolite-mirror
+```
+
+<Info>
+  `maxmind-geolite-mirror` accepts no CLI flags or positional arguments. All
+  configuration is supplied through environment variables or by editing
+  `lib/config.js` directly. Passing any arguments on the command line has no
+  effect.
+</Info>
+
+## Example output
+
+**Fresh download** (file does not yet exist, or remote is newer):
+
+```
+downloading /usr/local/share/GeoIP/GeoLite2-Country.mmdb
+downloading /usr/local/share/GeoIP/GeoLite2-City.mmdb
+downloading /usr/local/share/GeoIP/GeoLite2-ASN.mmdb
+```
+
+**All files already up to date** (server returned `304` for every database):
+
+```
+/usr/local/share/GeoIP/GeoLite2-Country.mmdb is up-to-date
+/usr/local/share/GeoIP/GeoLite2-City.mmdb is up-to-date
+/usr/local/share/GeoIP/GeoLite2-ASN.mmdb is up-to-date
+```
+
+Status messages are written to stdout. Errors are written to stderr. All output is suppressed when the tool runs inside `npm test`.
+
+## Database processing order
+
+The tool iterates through the three databases in series, in this fixed order:
+
+1. `GeoLite2-Country.mmdb`
+2. `GeoLite2-City.mmdb`
+3. `GeoLite2-ASN.mmdb`
+
+Each database is fully checked (and downloaded if necessary) before the next one begins. Parallel downloads are not performed.
+
+## Error handling and exit codes
+
+When an error occurs during processing of any database — such as a missing license key, a network failure, or a failed write — the tool prints the error to stderr, logs `exiting prematurely.` to stdout if any databases remain in the queue, and exits with code `1`. Databases that have not yet been processed are skipped.
+
+```
+missing license_key in /usr/local/lib/node_modules/maxmind-geolite-mirror/lib/config.js!
+```
+
+Always check the exit code when running the tool in scripts:
+
+```bash
+maxmind-geolite-mirror || echo "mirror failed, check stderr"
+```
+
+## Custom database directory
+
+Use `MAXMIND_DB_DIR` to write databases to a path other than the default `/usr/local/share/GeoIP/`. The variable can be set inline for a one-off run:
+
+```bash
+MAXMIND_DB_DIR=/home/example/maxmind-db maxmind-geolite-mirror
+```
+
+The directory must already exist; the tool does not create it.
+
+<Tip>
+  You can supply both `MAXMIND_LICENSE_KEY` and `MAXMIND_DB_DIR` inline for a
+  completely self-contained ad-hoc run without touching your shell profile or
+  `config.js`:
+
+  ```bash
+  MAXMIND_LICENSE_KEY=your_key_here MAXMIND_DB_DIR=/tmp/geoip maxmind-geolite-mirror
+  ```
+
+  This is useful for one-off tests or CI pipelines where you want an explicit,
+  auditable invocation.
+</Tip>
+
+## Tarball extraction
+
+Downloads arrive as `.tar.gz` archives. The tool extracts the `.mmdb` file from the archive using the optional `tar-stream` package, then writes it atomically to the destination via a `.tmp` intermediate file.
+
+<Note>
+  `tar-stream` is listed as an optional dependency. If it is not installed, the
+  tool emits the error `cannot open ..., tar-stream package is not available.`
+  and exits with code `1`. Install it with:
+
+  ```bash
+  npm install -g tar-stream
+  ```
+</Note>

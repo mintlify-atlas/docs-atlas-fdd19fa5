@@ -1,20 +1,62 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "maxmind-geolite-mirror: GeoLite2 Database Mirroring for Node.js"
+sidebarTitle: "Home"
+description: "Mirror MaxMind GeoLite2 databases locally with a single command. Conditional downloads ensure you only fetch updated files."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+maxmind-geolite-mirror is a lightweight Node.js CLI tool that downloads and keeps MaxMind GeoLite2 databases up-to-date on your server. It checks whether the remote copy is newer before downloading, so running it repeatedly is safe and bandwidth-efficient.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the tool and download your first GeoLite2 databases in minutes
+  </Card>
+  <Card title="License Key Setup" icon="key" href="/configuration/license-key">
+    Configure your MaxMind license key via environment variable or config file
+  </Card>
+  <Card title="Scheduling Updates" icon="clock" href="/usage/scheduling">
+    Automate weekly database updates with cron or a systemd timer
+  </Card>
+  <Card title="API Reference" icon="code" href="/reference/api">
+    Explore the public Node.js module API for programmatic use
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## What it does
+
+maxmind-geolite-mirror downloads the three GeoLite2 databases — **Country**, **City**, and **ASN** — from MaxMind's servers and stores them as `.mmdb` files on your local filesystem. On each run it sends an `If-Modified-Since` header, so files are only re-downloaded when MaxMind has published a new version.
+
+<Steps>
+  <Step title="Install the CLI globally">
+    ```bash
+    npm install -g maxmind-geolite-mirror
+    ```
+  </Step>
+  <Step title="Set your MaxMind license key">
+    ```bash
+    export MAXMIND_LICENSE_KEY=your_license_key_here
+    ```
+  </Step>
+  <Step title="Create the database directory">
+    ```bash
+    mkdir -p /usr/local/share/GeoIP
+    ```
+  </Step>
+  <Step title="Run the mirror">
+    ```bash
+    maxmind-geolite-mirror
+    ```
+    The tool downloads `GeoLite2-Country.mmdb`, `GeoLite2-City.mmdb`, and `GeoLite2-ASN.mmdb` to `/usr/local/share/GeoIP/`.
+  </Step>
+</Steps>
+
+## Key features
+
+- **Conditional downloads** — uses `If-Modified-Since` so only changed databases are fetched
+- **Three databases** — Country, City, and ASN in `.mmdb` format
+- **Zero runtime dependencies** — built entirely on Node.js built-ins (`https`, `fs`, `zlib`)
+- **Redirect support** — follows HTTP 302 redirects automatically
+- **Flexible configuration** — license key and database path via environment variables
+
+<Note>
+  A free MaxMind account and license key are required to download GeoLite2 databases. [Sign up at maxmind.com](https://www.maxmind.com/en/geolite2/signup) to get your key.
+</Note>

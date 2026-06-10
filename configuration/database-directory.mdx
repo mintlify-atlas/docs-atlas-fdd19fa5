@@ -1,0 +1,73 @@
+---
+title: "Set a custom GeoIP database storage directory"
+sidebarTitle: "Database Directory"
+description: "Override the default /usr/local/share/GeoIP/ storage path using the MAXMIND_DB_DIR environment variable for custom GeoIP database locations."
+---
+
+By default, `maxmind-geolite-mirror` writes all downloaded `.mmdb` files to `/usr/local/share/GeoIP/`. This path works well on most Linux and macOS servers where the directory is writable by the process user, and it is the conventional location that many GeoIP-aware applications expect. If that path is unavailable — for example in a container, a shared hosting environment, or a developer workstation — you can point the tool at any other directory using the `MAXMIND_DB_DIR` environment variable.
+
+## Default path
+
+The default storage directory is defined in `lib/config.js`:
+
+```js
+// lib/config.js
+
+// where your GeoIP databases are stored
+exports.dbDir = process.env.MAXMIND_DB_DIR || '/usr/local/share/GeoIP/';
+```
+
+If `MAXMIND_DB_DIR` is not set, every database file is written to `/usr/local/share/GeoIP/`.
+
+## Overriding the directory
+
+Set `MAXMIND_DB_DIR` to any absolute path before running the command:
+
+```bash
+export MAXMIND_DB_DIR=/home/example/maxmind-db
+maxmind-geolite-mirror
+```
+
+The tool will read the variable at startup and write all three `.mmdb` files into the specified directory.
+
+## Creating the directory
+
+The tool does not create the directory automatically. Make sure the target path exists before running the mirror:
+
+```bash
+mkdir -p /your/custom/path
+export MAXMIND_DB_DIR=/your/custom/path
+maxmind-geolite-mirror
+```
+
+<Note>
+  The process running `maxmind-geolite-mirror` must have read and write permission on the target directory. If the directory is owned by another user, adjust permissions with `chmod` or `chown` before running the tool.
+</Note>
+
+## Trailing slash convention
+
+`config.js` appends the local filename directly to `dbDir` without inserting a separator:
+
+```js
+const dest = `${config.dbDir}${item.local}`;
+```
+
+This means `dbDir` must end with a `/`. The built-in default already includes the trailing slash. If you set `MAXMIND_DB_DIR`, include the trailing slash yourself:
+
+```bash
+# Correct — trailing slash present
+export MAXMIND_DB_DIR=/home/example/maxmind-db/
+
+# Also works — the shell variable is read as-is
+export MAXMIND_DB_DIR=/home/example/maxmind-db/
+```
+
+Without the trailing slash, the tool will attempt to write files with paths such as `/home/example/maxmind-dbGeoLite2-Country.mmdb`, which is almost certainly not what you want.
+
+<Tip>
+  You can combine both required environment variables into a single one-liner for quick runs or cron jobs:
+
+  ```bash
+  MAXMIND_LICENSE_KEY=your_key_here MAXMIND_DB_DIR=/your/custom/path/ maxmind-geolite-mirror
+  ```
+</Tip>

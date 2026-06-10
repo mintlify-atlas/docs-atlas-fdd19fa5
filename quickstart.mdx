@@ -1,47 +1,116 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get started with maxmind-geolite-mirror"
+sidebarTitle: "Quickstart"
+description: "Install maxmind-geolite-mirror, configure your MaxMind license key, and download GeoLite2 databases to your server in under 5 minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+`maxmind-geolite-mirror` is a global CLI tool you install once with npm and then run on a schedule to keep MaxMind's GeoLite2 IP geolocation databases current on your server. This guide walks you from zero to a fully populated `/usr/local/share/GeoIP/` directory with all three `.mmdb` files downloaded and ready to use.
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+<Warning>
+  A valid MaxMind license key is required. If `MAXMIND_LICENSE_KEY` is not set and no key is present in `config.js`, the tool exits immediately with an error: `missing license_key in .../config.js!`. No databases will be downloaded without a key configured.
+</Warning>
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Get a MaxMind license key">
+    GeoLite2 databases require a free MaxMind account. Register at [maxmind.com/en/geolite2/signup](https://www.maxmind.com/en/geolite2/signup), then generate a license key from the **My License Key** section of your account portal.
+
+    Keep the key handy — you will set it as the `MAXMIND_LICENSE_KEY` environment variable in a later step.
+  </Step>
+
+  <Step title="Install the CLI">
+    Install the package globally with npm. Node.js **v14.0.0 or later** is required.
 
     ```bash
-    npm install your-package
+    npm install -g maxmind-geolite-mirror
+    ```
+
+    This installs the `maxmind-geolite-mirror` binary to your global npm bin directory (typically `/usr/local/bin/maxmind-geolite-mirror`).
+  </Step>
+
+  <Step title="Create the database directory">
+    The tool writes `.mmdb` files to `/usr/local/share/GeoIP/` by default. Create the directory if it does not already exist:
+
+    ```bash
+    mkdir -p /usr/local/share/GeoIP
+    ```
+
+    Ensure the user that will run the tool has write permission to this directory.
+  </Step>
+
+  <Step title="Set the license key">
+    Export your MaxMind license key as an environment variable in your current shell session:
+
+    ```bash
+    export MAXMIND_LICENSE_KEY=your_key_here
+    ```
+
+    Replace `your_key_here` with the license key you generated in step 1. To make this permanent, add the `export` line to your shell profile (e.g. `~/.bashrc`, `~/.zshrc`) or your system's environment configuration.
+  </Step>
+
+  <Step title="Run the mirror">
+    Execute the CLI to download all three GeoLite2 databases:
+
+    ```bash
+    maxmind-geolite-mirror
+    ```
+
+    The tool processes each database in series. For each file it first sends a `HEAD` request with an `If-Modified-Since` header. If the remote file is newer (or the local file does not yet exist), it downloads and extracts the tarball. You will see output similar to:
+
+    ```
+    downloading /usr/local/share/GeoIP/GeoLite2-Country.mmdb
+    downloading /usr/local/share/GeoIP/GeoLite2-City.mmdb
+    downloading /usr/local/share/GeoIP/GeoLite2-ASN.mmdb
+    ```
+
+    On subsequent runs, if the databases are already current, the output will instead show:
+
+    ```
+    /usr/local/share/GeoIP/GeoLite2-Country.mmdb is up-to-date
+    /usr/local/share/GeoIP/GeoLite2-City.mmdb is up-to-date
+    /usr/local/share/GeoIP/GeoLite2-ASN.mmdb is up-to-date
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Verify the downloaded files">
+    Confirm all three database files are present in the GeoIP directory:
 
     ```bash
-    your-cli init
+    ls -la /usr/local/share/GeoIP/
     ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
+    You should see output like:
+
     ```
+    -rw-r--r--  1 root  wheel   6081823 Jan 14 09:00 GeoLite2-ASN.mmdb
+    -rw-r--r--  1 root  wheel  69956199 Jan 14 09:00 GeoLite2-City.mmdb
+    -rw-r--r--  1 root  wheel   6322287 Jan 14 09:00 GeoLite2-Country.mmdb
+    ```
+
+    All three files are standard MaxMind DB (`.mmdb`) binary files readable by any MaxMind-compatible library.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Downloaded files
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+After a successful run, your GeoIP directory contains the following files:
+
+| File | Description |
+|---|---|
+| `GeoLite2-Country.mmdb` | Country-level geolocation data (country code, country name) |
+| `GeoLite2-City.mmdb` | City-level geolocation data (city, subdivision, postal code, coordinates) |
+| `GeoLite2-ASN.mmdb` | Autonomous System Number and organization name for each IP range |
+
+<Note>
+  If `/usr/local/share/GeoIP` is not writable by the user running the tool, set the `MAXMIND_DB_DIR` environment variable to a directory you do control:
+
+  ```bash
+  export MAXMIND_DB_DIR=/home/example/maxmind-db
+  maxmind-geolite-mirror
+  ```
+
+  The tool will read `MAXMIND_DB_DIR` at startup and write all database files to that path instead of the default.
+</Note>
+
+<Tip>
+  Run `maxmind-geolite-mirror` on a weekly cron schedule to keep your databases automatically up-to-date. MaxMind publishes updated GeoLite2 databases every Tuesday, and the built-in `If-Modified-Since` check means the tool only downloads data when something has actually changed. See the [Scheduling guide](/usage/scheduling) for ready-to-use cron job examples.
 </Tip>
